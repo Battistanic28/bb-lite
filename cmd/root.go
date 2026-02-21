@@ -10,6 +10,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(newsCmd)
 	rootCmd.AddCommand(performanceCmd)
+	rootCmd.AddCommand(intradayCmd)
 }
 
 func Execute() error {
