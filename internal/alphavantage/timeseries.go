@@ -70,6 +70,7 @@ func (c *Client) FetchTimeSeries(ticker string, days int) (*TimeSeriesResult, er
 			break
 		}
 	}
+	fmt.Println(seriesData)
 
 	if seriesData == nil {
 		return nil, fmt.Errorf("no time series data found in response")
