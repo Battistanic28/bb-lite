@@ -15,12 +15,20 @@ var intradayCmd = &cobra.Command{
 	Use:   "intraday TICKER",
 	Short: "Show a line chart of intraday close prices for a ticker symbol",
 	Args:  cobra.ExactArgs(1),
+
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ticker := args[0]
 
 		// Using demo API key for the test endpoint.
 		// TODO: switch to config.GetAPIKey() once a premium key is available.
+
+		// apiKey, err := config.GetAPIKey()
+		// if err != nil {
+		// 	return err
+		// }
 		client := alphavantage.NewClient("demo")
+		// client := alphavantage.NewClient(apiKey)
+
 		result, err := client.FetchIntraday(ticker, intradayInterval)
 		if err != nil {
 			return fmt.Errorf("fetching intraday data: %w", err)

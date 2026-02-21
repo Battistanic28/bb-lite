@@ -56,21 +56,33 @@ bb-lite performance AAPL --days 60
 |------|---------|-------------|
 | `--days` | `30` | Lookback window in days |
 
-Renders a full-width terminal candlestick chart with:
-- Green/red colored candles (close >= open / close < open)
-- Y-axis with price labels
-- X-axis with date labels
-- Header banner showing open, close, and percent change
+Renders a full-width terminal candlestick chart with bull/bear colored candles, braille-resolution wicks, Y-axis price labels, X-axis date labels, and a header banner showing OHLC and percent change. Powered by [ntcharts](https://github.com/NimbleMarkets/ntcharts).
+
+### `intraday`
+
+Show a line chart of intraday close prices for a ticker symbol.
+
+```bash
+bb-lite intraday IBM
+bb-lite intraday IBM --interval 15min
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--interval` | `5min` | Data interval (`1min`, `5min`, `15min`, `30min`, `60min`) |
+
+Renders a braille-resolution line chart of close prices with time-of-day X-axis labels. Currently uses the Alpha Vantage demo API key (only works for `IBM` with `5min` interval).
+
+## Future Considerations
+
+- **Interactive BubbleTea mode** — the charts use [ntcharts](https://github.com/NimbleMarkets/ntcharts) which is built on BubbleTea. A future enhancement could wrap the chart in a `tea.Program` for keyboard scrolling, zooming, and mouse support.
 
 ## Roadmap
 
 ### Known Limitations
 
-- **Intraday charting:** The `TIME_SERIES_INTRADAY` endpoint (15min, 30min, 60min intervals) requires an Alpha Vantage premium plan. Once available, add `--hours` support with auto-selected intervals.
-- **Wick rendering:** Wicks currently use the same column width as the candle body. Narrow single-character wicks centered within the body would look more accurate.
 - **Volume subplot:** Add an optional volume bar chart below the price chart.
-- **Candle body fill:** Distinguish between hollow and filled candle bodies for open vs. close direction (traditional candlestick style).
-- **Responsive height:** Chart height is currently fixed at 28 rows. Could auto-scale based on terminal height.
+- **Responsive height:** Chart height is currently fixed. Could auto-scale based on terminal height.
 
 ### Market Data
 
