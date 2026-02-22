@@ -16,7 +16,7 @@ import (
 	"golang.org/x/term"
 )
 
-var hoursBack int
+var newsDaysBack int
 
 var newsCmd = &cobra.Command{
 	Use:   "news TICKER",
@@ -31,13 +31,13 @@ var newsCmd = &cobra.Command{
 		}
 
 		client := alphavantage.NewClient(apiKey)
-		result, err := client.FetchNews(ticker, hoursBack)
+		result, err := client.FetchNews(ticker, newsDaysBack)
 		if err != nil {
 			return fmt.Errorf("fetching news: %w", err)
 		}
 
 		if len(result.Articles) == 0 {
-			fmt.Printf("No news found for %s in the last %d hours.\n", ticker, hoursBack)
+			fmt.Printf("No news found for %s in the last %d days.\n", ticker, newsDaysBack)
 			return nil
 		}
 
@@ -46,7 +46,7 @@ var newsCmd = &cobra.Command{
 }
 
 func init() {
-	newsCmd.Flags().IntVar(&hoursBack, "hours", 24, "lookback window in hours")
+	newsCmd.Flags().IntVar(&newsDaysBack, "days", 7, "lookback window in days")
 }
 
 func termWidth() int {
@@ -183,8 +183,8 @@ func runNewsTUI(ticker string, result *alphavantage.NewsResult) error {
 
 	sentimentText := fmt.Sprintf("%s (%.3f)", result.SentimentLabel, result.OverallScore)
 	banner := lipgloss.NewStyle().Bold(true).Render(
-		fmt.Sprintf(" BB-LITE NEWS | %s | Last %d hours | %d articles | Sentiment: %s",
-			ticker, hoursBack, len(result.Articles),
+		fmt.Sprintf(" BB-LITE NEWS | %s | Last %d days | %d articles | Sentiment: %s",
+			ticker, newsDaysBack, len(result.Articles),
 			sentimentStyle(result.SentimentLabel).Render(sentimentText)))
 
 	m := newsModel{table: t, banner: banner, urls: urls}

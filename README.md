@@ -34,12 +34,12 @@ Fetch recent news and sentiment for a ticker symbol.
 
 ```bash
 bb-lite news NVDA
-bb-lite news AAPL --hours 48
+bb-lite news AAPL --days 14
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--hours` | `24` | Lookback window in hours |
+| `--days` | `7` | Lookback window in days |
 
 Displays a table with date, source, title, and a clickable link for each article. Includes an aggregate sentiment score (Bullish/Bearish/Neutral) in the header.
 

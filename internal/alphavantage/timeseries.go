@@ -27,7 +27,8 @@ type TimeSeriesResult struct {
 }
 
 func (c *Client) FetchTimeSeries(ticker string, days int) (*TimeSeriesResult, error) {
-	cutoff := time.Now().UTC().AddDate(0, 0, -days)
+	now := time.Now().UTC()
+	cutoff := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -days)
 
 	params := url.Values{}
 	params.Set("function", "TIME_SERIES_DAILY")

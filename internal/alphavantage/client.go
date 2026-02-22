@@ -36,7 +36,8 @@ func NewClient(apiKey string) *Client {
 }
 
 type apiResponse struct {
-	Feed []feedItem `json:"feed"`
+	Items string     `json:"items"`
+	Feed  []feedItem `json:"feed"`
 }
 
 type feedItem struct {
@@ -53,8 +54,8 @@ type tickerSentiment struct {
 	Label  string  `json:"ticker_sentiment_label"`
 }
 
-func (c *Client) FetchNews(ticker string, hoursBack int) (*NewsResult, error) {
-	timeFrom := time.Now().UTC().Add(-time.Duration(hoursBack) * time.Hour)
+func (c *Client) FetchNews(ticker string, days int) (*NewsResult, error) {
+	timeFrom := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
 	timeFromStr := timeFrom.Format("20060102T1504")
 
 	u := fmt.Sprintf("https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=%s&time_from=%s&apikey=%s",
