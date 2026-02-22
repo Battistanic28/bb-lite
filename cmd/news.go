@@ -3,11 +3,15 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
+	"os/exec"
+	"runtime"
 
 	"bb-lite/internal/alphavantage"
 	"bb-lite/internal/config"
 
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -37,32 +41,12 @@ var newsCmd = &cobra.Command{
 			return nil
 		}
 
-		printGrid(ticker, result)
-		return nil
+		return runNewsTUI(ticker, result)
 	},
 }
 
 func init() {
 	newsCmd.Flags().IntVar(&hoursBack, "hours", 24, "lookback window in hours")
-}
-
-// ANSI color helpers
-const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[1;31m"
-	colorGreen  = "\033[1;32m"
-	colorYellow = "\033[1;33m"
-)
-
-func sentimentColor(label string) string {
-	switch label {
-	case "Bullish", "Somewhat-Bullish":
-		return colorGreen
-	case "Bearish", "Somewhat-Bearish":
-		return colorRed
-	default:
-		return colorYellow
-	}
 }
 
 func termWidth() int {
@@ -73,98 +57,138 @@ func termWidth() int {
 	return w
 }
 
-// hyperlink generates an OSC 8 clickable terminal hyperlink.
-// Displays label as visible text, but clicking opens url.
-func hyperlink(url, label string) string {
-	return fmt.Sprintf("\033]8;;%s\033\\%s\033]8;;\033\\", url, label)
+func openBrowser(url string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return exec.Command("cmd", "/c", "start", url).Start()
+	case "darwin":
+		return exec.Command("open", url).Start()
+	default:
+		return exec.Command("xdg-open", url).Start()
+	}
 }
 
-func printGrid(ticker string, result *alphavantage.NewsResult) {
+func sentimentStyle(label string) lipgloss.Style {
+	base := lipgloss.NewStyle().Bold(true)
+	switch label {
+	case "Bullish", "Somewhat-Bullish":
+		return base.Foreground(lipgloss.Color("#00C851"))
+	case "Bearish", "Somewhat-Bearish":
+		return base.Foreground(lipgloss.Color("#FF4444"))
+	default:
+		return base.Foreground(lipgloss.Color("#FFD700"))
+	}
+}
+
+type newsModel struct {
+	table  table.Model
+	banner string
+	urls   []string // parallel to rows, for opening on Enter
+	status string   // feedback message shown in footer
+}
+
+func (m newsModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m newsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "ctrl+c", "esc":
+			return m, tea.Quit
+		case "enter", "o":
+			idx := m.table.Cursor()
+			if idx >= 0 && idx < len(m.urls) {
+				if err := openBrowser(m.urls[idx]); err != nil {
+					m.status = fmt.Sprintf("Failed to open: %s", err)
+				} else {
+					m.status = fmt.Sprintf("Opened: %s", m.urls[idx])
+				}
+			}
+			return m, nil
+		}
+	}
+	var cmd tea.Cmd
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
+}
+
+var (
+	baseStyle  = lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#666666"))
+	helpStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+	statusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00BFFF")).Bold(true)
+)
+
+func (m newsModel) View() string {
+	help := helpStyle.Render("  q/esc: quit • ↑/↓: navigate • enter/o: open in browser")
+	footer := help
+	if m.status != "" {
+		footer = "  " + statusStyle.Render(m.status) + "\n" + help
+	}
+	return m.banner + "\n" + baseStyle.Render(m.table.View()) + "\n" + footer + "\n"
+}
+
+func runNewsTUI(ticker string, result *alphavantage.NewsResult) error {
 	tw := termWidth()
 
-	const (
-		colDate   = 16
-		colSource = 20
-		colLink   = 6
-	)
-	// 4 columns: 5 borders + 4 leading spaces = 9 chrome chars
-	chrome := 9
-	colTitle := tw - chrome - colDate - colSource - colLink
+	colDate := 16
+	colSource := 20
+	colTitle := tw - colDate - colSource - 11
 	if colTitle < 20 {
 		colTitle = 20
 	}
 
-	hDate := strings.Repeat("─", colDate+1)
-	hSource := strings.Repeat("─", colSource+1)
-	hTitle := strings.Repeat("─", colTitle+1)
-	hLink := strings.Repeat("─", colLink+1)
-
-	divider := func(left, mid, right string) string {
-		return left + hDate + mid + hSource + mid + hTitle + mid + hLink + right
+	columns := []table.Column{
+		{Title: "Date", Width: colDate},
+		{Title: "Source", Width: colSource},
+		{Title: "Title", Width: colTitle},
 	}
 
-	row := func(a, b, c, d string) string {
-		return fmt.Sprintf("│ %-*s│ %-*s│ %-*s│ %-*s│", colDate, a, colSource, b, colTitle, c, colLink, d)
-	}
-
-	// sentiment display with color
-	sentimentText := fmt.Sprintf("%s (%.3f)", result.SentimentLabel, result.OverallScore)
-	clr := sentimentColor(result.SentimentLabel)
-	coloredSentiment := clr + sentimentText + colorReset
-
-	// header line
-	headerPlain := fmt.Sprintf(" BB-LITE NEWS │ %s │ Last %d hours │ %d articles │ Sentiment: %s ",
-		ticker, hoursBack, len(result.Articles), sentimentText)
-	headerColored := fmt.Sprintf(" BB-LITE NEWS │ %s │ Last %d hours │ %d articles │ Sentiment: %s ",
-		ticker, hoursBack, len(result.Articles), coloredSentiment)
-
-	bannerWidth := colDate + 1 + colSource + 1 + colTitle + 1 + colLink + 1 + 3
-	plainLen := len(headerPlain)
-	if plainLen > bannerWidth {
-		headerPlain = headerPlain[:bannerWidth]
-		headerColored = headerPlain
-	}
-
-	fmt.Println("┌" + strings.Repeat("─", bannerWidth) + "┐")
-	fmt.Println("│" + headerColored + strings.Repeat(" ", bannerWidth-plainLen) + "│")
-
-	fmt.Println(divider("├", "┬", "┤"))
-	fmt.Println(row("DATE", "SOURCE", "TITLE", "LINK"))
-	fmt.Println(divider("├", "┼", "┤"))
-
+	rows := make([]table.Row, len(result.Articles))
+	urls := make([]string, len(result.Articles))
 	for i, a := range result.Articles {
-		link := hyperlink(a.URL, "Link")
-		// link contains invisible escape chars, so we pad manually
-		// visible width of "Link" is 4, column is colLink
-		linkPadded := link + strings.Repeat(" ", colLink-4)
-		fmt.Printf("│ %-*s│ %-*s│ %-*s│ %s│\n",
-			colDate, a.PublishedAt.Format("2006-01-02 15:04"),
-			colSource, truncate(a.Source, colSource),
-			colTitle, truncate(a.Title, colTitle),
-			linkPadded,
-		)
-		if i < len(result.Articles)-1 {
-			fmt.Println(divider("├", "┼", "┤"))
+		rows[i] = table.Row{
+			a.PublishedAt.Format("2006-01-02 15:04"),
+			a.Source,
+			a.Title,
 		}
+		urls[i] = a.URL
 	}
 
-	fmt.Println(divider("└", "┴", "┘"))
-}
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		Bold(true).
+		Foreground(lipgloss.Color("#FFA500")).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("#666666")).
+		BorderBottom(true)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(true)
 
-func pad(s string, width int, ch rune) string {
-	if len(s) >= width {
-		return s
+	height := len(rows)
+	if height > 20 {
+		height = 20
 	}
-	return s + strings.Repeat(string(ch), width-len(s))
-}
 
-func truncate(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return string(runes)
-	}
-	if max <= 3 {
-		return string(runes[:max])
-	}
-	return string(runes[:max-3]) + "..."
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(true),
+		table.WithHeight(height),
+		table.WithStyles(s),
+	)
+
+	sentimentText := fmt.Sprintf("%s (%.3f)", result.SentimentLabel, result.OverallScore)
+	banner := lipgloss.NewStyle().Bold(true).Render(
+		fmt.Sprintf(" BB-LITE NEWS | %s | Last %d hours | %d articles | Sentiment: %s",
+			ticker, hoursBack, len(result.Articles),
+			sentimentStyle(result.SentimentLabel).Render(sentimentText)))
+
+	m := newsModel{table: t, banner: banner, urls: urls}
+	p := tea.NewProgram(m)
+	_, err := p.Run()
+	return err
 }

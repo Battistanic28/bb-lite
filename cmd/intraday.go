@@ -4,14 +4,12 @@ import (
 	"fmt"
 
 	"bb-lite/internal/alphavantage"
-	"bb-lite/internal/chart"
 	"bb-lite/internal/web"
 
 	"github.com/spf13/cobra"
 )
 
 var intradayInterval string
-var intradayWeb bool
 
 var intradayCmd = &cobra.Command{
 	Use:   "intraday TICKER",
@@ -36,18 +34,10 @@ var intradayCmd = &cobra.Command{
 			return fmt.Errorf("fetching intraday data: %w", err)
 		}
 
-		if intradayWeb {
-			return web.OpenChart(result)
-		}
-
-		tw := termWidth()
-		output := chart.RenderLineChart(result, tw, 24)
-		fmt.Print(output)
-		return nil
+		return web.OpenChart(result)
 	},
 }
 
 func init() {
 	intradayCmd.Flags().StringVar(&intradayInterval, "interval", "5min", "data interval (1min, 5min, 15min, 30min, 60min)")
-	intradayCmd.Flags().BoolVar(&intradayWeb, "web", false, "open an interactive chart in the browser")
 }

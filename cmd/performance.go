@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"bb-lite/internal/alphavantage"
-	"bb-lite/internal/chart"
 	"bb-lite/internal/config"
+	"bb-lite/internal/web"
 
 	"github.com/spf13/cobra"
 )
@@ -30,10 +30,7 @@ var performanceCmd = &cobra.Command{
 			return fmt.Errorf("fetching time series: %w", err)
 		}
 
-		tw := termWidth()
-		output := chart.RenderCandlestick(result, tw, 28)
-		fmt.Print(output)
-		return nil
+		return web.OpenChart(result)
 	},
 }
 
