@@ -57,10 +57,12 @@ type tickerSentiment struct {
 func (c *Client) FetchNews(ticker string, days int) (*NewsResult, error) {
 	timeFrom := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
 	timeFromStr := timeFrom.Format("20060102T1504")
+	limit := "1000" // limit hardcoded to max (1000)
 
-	u := fmt.Sprintf("https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=%s&time_from=%s&apikey=%s",
+	u := fmt.Sprintf("https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=%s&time_from=%s&limit=%s&apikey=%s",
 		url.QueryEscape(ticker),
 		timeFromStr,
+		limit,
 		url.QueryEscape(c.APIKey),
 	)
 
