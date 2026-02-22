@@ -34,7 +34,7 @@ var intradayCmd = &cobra.Command{
 			return fmt.Errorf("fetching intraday data: %w", err)
 		}
 
-		return web.OpenChart(result)
+		return web.OpenChart(result, "line")
 	},
 }
 

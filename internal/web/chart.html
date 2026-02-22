@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{.Symbol}} - Intraday Chart</title>
+  <title>{{.Symbol}} Chart</title>
   <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     * {
@@ -58,7 +58,18 @@
       rightPriceScale: { borderColor: '#485c7b' },
     });
 
-    const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+    {{if eq .ChartType "line"}}
+    const priceSeries = chart.addSeries(LightweightCharts.LineSeries, {
+      color: '#FFA500',
+      lineWidth: 2,
+    });
+
+    priceSeries.setData(data.map(d => ({
+      time: d.time,
+      value: d.close,
+    })));
+    {{else}}
+    const priceSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
       upColor: '#00C851',
       downColor: '#FF4444',
       borderDownColor: '#FF4444',
@@ -67,7 +78,7 @@
       wickUpColor: '#00C851',
     });
 
-    candleSeries.setData(data.map(d => ({
+    priceSeries.setData(data.map(d => ({
       time: d.time,
       open: d.open,
       high: d.high,
@@ -89,6 +100,7 @@
       value: d.volume,
       color: d.close >= d.open ? 'rgba(0,200,81,0.3)' : 'rgba(255,68,68,0.3)',
     })));
+    {{end}}
 
     chart.timeScale().fitContent();
 

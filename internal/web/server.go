@@ -25,7 +25,7 @@ type candleJSON struct {
 	Volume int64   `json:"volume"`
 }
 
-func OpenChart(result *alphavantage.TimeSeriesResult) error {
+func OpenChart(result *alphavantage.TimeSeriesResult, chartType string) error {
 	candles := make([]candleJSON, len(result.Candles))
 	for i, c := range result.Candles {
 		candles[i] = candleJSON{
@@ -60,11 +60,13 @@ func OpenChart(result *alphavantage.TimeSeriesResult) error {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		tmpl.Execute(w, struct {
-			Symbol   string
-			DataJSON template.JS
+			Symbol    string
+			DataJSON  template.JS
+			ChartType string
 		}{
-			Symbol:   result.Symbol,
-			DataJSON: template.JS(data),
+			Symbol:    result.Symbol,
+			DataJSON:  template.JS(data),
+			ChartType: chartType,
 		})
 	})
 

@@ -30,7 +30,7 @@ var performanceCmd = &cobra.Command{
 			return fmt.Errorf("fetching time series: %w", err)
 		}
 
-		return web.OpenChart(result)
+		return web.OpenChart(result, "candlestick")
 	},
 }
 
